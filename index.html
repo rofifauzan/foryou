@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Queen Of Angel — Planet Ring Background</title>
+<title>Queen Of Angel — My Note</title>
 <style>
   .slider-container {
     position: relative;
@@ -388,6 +388,178 @@ h2 {
         left: 12px;
     }
 }
+
+/* Password gate */
+#lock-screen { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(1, 3, 16, .88); backdrop-filter: blur(10px); }
+.lock-card { width: min(360px, 100%); padding: 28px 22px; border: 1px solid #00f0ff; border-radius: 18px; background: rgba(3, 8, 28, .94); box-shadow: 0 0 28px rgba(0,240,255,.4); }
+.lock-icon { color: #00f0ff; font-size: 34px; }
+.lock-card h2 { margin: 8px 0; }
+.lock-card p { color: #c9faff; }
+.lock-card input { display: block; width: 100%; margin: 18px 0 12px; padding: 12px; color: white; background: #071426; border: 1px solid #00f0ff; border-radius: 9px; }
+#lock-error { min-height: 18px; color: #ff9eae; font-size: 13px; }
+.note-card { max-width: 680px; }
+.note-photo { display: block; width: 150px; height: 150px; margin: 18px auto 8px; object-fit: cover; border: 2px solid #00f0ff; border-radius: 16px; box-shadow: 0 0 22px rgba(0,240,255,.55); }
+.note-caption { color: #d9faff; font-weight: bold; }
+.note-input { display: block; width: min(560px, 100%); min-height: 170px; margin: 18px auto; padding: 14px; color: white; background: rgba(0,0,0,.48); border: 1px solid rgba(0,240,255,.7); border-radius: 12px; resize: vertical; font: inherit; line-height: 1.6; }
+#floating-music { position: fixed; right: 22px; bottom: 22px; z-index: 30; width: 58px; height: 58px; border: 2px solid #00f0ff; border-radius: 50%; color: #001018; background: #00f0ff; font-size: 27px; cursor: pointer; box-shadow: 0 0 14px #00f0ff, 0 0 30px rgba(0,240,255,.65); }
+#floating-music.playing { animation: musicSpin 3s linear infinite; }
+@keyframes musicSpin { to { transform: rotate(360deg); } }
+
+/* GALERI FOTO MY NOTE */
+.note-photo-tools {
+  margin: 18px auto;
+  max-width: 640px;
+}
+
+.note-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.note-upload-card {
+  border: 1px solid #00f0ff;
+  border-radius: 12px;
+  padding: 6px;
+  background: rgba(0,0,0,.45);
+  box-shadow: 0 0 12px rgba(0,240,255,.25);
+}
+
+.note-upload-card img {
+  width: 100%;
+  height: 115px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: zoom-in;
+}
+
+.note-upload-card button {
+  margin-top: 5px;
+  padding: 5px 9px;
+  border: 1px solid #ff7b9c;
+  border-radius: 7px;
+  color: white;
+  background: rgba(150,20,55,.35);
+  cursor: pointer;
+}
+// FITUR TAMBAH FOTO MY NOTE
+const photoPicker = document.getElementById('note-photo-picker');
+const photoGrid = document.getElementById('note-photo-grid');
+const photoStatus = document.getElementById('note-photo-status');
+
+const photoStoreKey = 'rofi-my-note-photos';
+
+function loadNotePhotos() {
+  let photos = [];
+
+  try {
+    photos = JSON.parse(localStorage.getItem(photoStoreKey) || '[]');
+  } catch (error) {}
+
+  photoGrid.innerHTML = '';
+
+  photos.forEach((src, index) => {
+    const card = document.createElement('div');
+    card.className = 'note-upload-card';
+
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = 'Foto kenangan ' + (index + 1);
+
+    // Klik foto untuk memperbesar
+    img.addEventListener('click', () => {
+      if (typeof showPhoto === 'function') {
+        showPhoto(img);
+      }
+    });
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = 'Hapus';
+
+    remove.addEventListener('click', () => {
+      photos.splice(index, 1);
+
+      localStorage.setItem(
+        photoStoreKey,
+        JSON.stringify(photos)
+      );
+
+      loadNotePhotos();
+    });
+
+    card.append(img, remove);
+    photoGrid.appendChild(card);
+  });
+}
+
+// Memilih dan menyimpan foto
+photoPicker.addEventListener('change', async () => {
+  const files = Array.from(photoPicker.files || [])
+    .filter(file => file.type.startsWith('image/'));
+
+  if (!files.length) return;
+
+  let photos = [];
+
+  try {
+    photos = JSON.parse(localStorage.getItem(photoStoreKey) || '[]');
+  } catch (error) {}
+
+  for (const file of files) {
+    if (photos.length >= 12) break;
+
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const compressed = await new Promise((resolve, reject) => {
+        const image = new Image();
+
+        image.onload = () => {
+          const scale = Math.min(
+            1,
+            1200 / Math.max(image.width, image.height)
+          );
+
+          const canvas = document.createElement('canvas');
+
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+
+          canvas.getContext('2d').drawImage(
+            image, 0, 0, canvas.width, canvas.height
+          );
+
+          resolve(canvas.toDataURL('image/jpeg', 0.78));
+        };
+
+        image.onerror = reject;
+        image.src = dataUrl;
+      });
+
+      photos.push(compressed);
+
+    } catch (error) {}
+  }
+
+  try {
+    localStorage.setItem(photoStoreKey, JSON.stringify(photos));
+    photoStatus.textContent = 'Foto berhasil ditambahkan!';
+    loadNotePhotos();
+  } catch (error) {
+    photoStatus.textContent = 'Penyimpanan penuh. Hapus beberapa foto.';
+  }
+
+  photoPicker.value = '';
+});
+
+loadNotePhotos();
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -395,6 +567,64 @@ h2 {
 <body>
 <div id="webgl-container"></div>
 <div class="stars"></div>
+
+<!-- Password gate -->
+<div id="lock-screen" role="dialog" aria-modal="true" aria-labelledby="lock-title">
+  <form id="lock-form" class="lock-card">
+    <div class="lock-icon">✦</div>
+    <h2 id="lock-title">Private Space</h2>
+    <p>Masukkan password untuk melanjutkan</p>
+    <input id="site-password" type="password" placeholder="Password" autocomplete="current-password" required>
+    <button class="neon-button" type="submit">Buka</button>
+    <p id="lock-error" aria-live="polite"></p>
+  </form>
+</div>
+
+<!-- My Note -->
+<section class="panel" id="note-panel" aria-hidden="true">
+  <div class="panel-card note-card">
+    <h2 class="panel-title">My Note</h2>
+    <p class="panel-description">A little space for thoughts and memories.</p>
+    <img class="note-photo" src="Rofi Fauzan.jpeg" alt="Rofi Fauzan">
+    <p class="note-caption">Rofi Fauzan</p>
+    <div class="note-photo-tools">
+  <p>Tambahkan foto untuk kenanganmu</p>
+
+  <input
+    id="note-photo-picker"
+    type="file"
+    accept="image/*"
+    multiple
+    hidden
+  >
+
+  <button
+    class="neon-button"
+    type="button"
+    onclick="document.getElementById('note-photo-picker').click()"
+  >
+    ＋ Tambah Foto
+  </button>
+
+  <div id="note-photo-grid" class="note-photo-grid"></div>
+
+  <p id="note-photo-status"></p>
+</div>
+    <textarea id="note-text" class="note-input" rows="8" placeholder="Tulis catatanmu di sini..."></textarea>
+    <div class="panel-actions">
+      <button class="neon-button" type="button" id="save-note">Simpan Catatan</button>
+      <button class="neon-button" type="button" onclick="closePanels()">Kembali</button>
+    </div>
+    <p id="note-status" class="music-note" aria-live="polite"></p>
+  </div>
+</section>
+
+<!-- Compact music control -->
+<audio id="background-audio" preload="metadata" loop>
+  <source src="Ibadow___Ibadowa_-_For_the_rest_of_my_life__Cover_Maher_Zain_(128k).mp3" type="audio/mpeg">
+</audio>
+<button id="floating-music" type="button" aria-label="Putar musik" title="Putar / jeda musik">♫</button>
+
 <div class="container">
 
 <img src="S1.jpg">
@@ -405,42 +635,27 @@ h2 {
 <a class="link" href="https://www.instagram.com/fauzan02_rzan?mdxt=eWExcHp2MnA5bmVz">Instagram</a>
 <a class="link" href="https://www.tiktok.com/@rofialqory?_r=1&_t=ZS-9Ayv8YvK0G4">TikTok</a>
 <a class="link" href="#galeri" onclick="openPanel('gallery-panel'); return false;">My File</a>
-<a class="link" href="MILLION_STARS_STADIUM_BREAKBEAT(256k).mp3" onclick="openPanel('music-panel'); return false;">My Music</a>
+<a class="link" href="#my-note" onclick="openPanel('note-panel'); return false;">My Note</a>
 
 </div>
 
-<!-- Panel galeri: background planet tetap berjalan di belakangnya -->
+<!-- Panel galeri -->
 <section class="panel" id="gallery-panel" aria-hidden="true">
   <div class="panel-card">
     <h2 class="panel-title">My Queen</h2>
     <p class="panel-description">You Are My Heart.</p>
-    ```html
-<div class="photo-grid">
-  <div class="photo-frame">
-    <img src="s2.jpg" alt="Foto 1" onclick="showPhoto(this)">
-    <p>Foto 1</p>
-  </div>
-
-  <div class="photo-frame">
-    <img src="s3.jpg" alt="Foto 2" onclick="showPhoto(this)">
-    <p>Foto 2</p>
-  </div>
-
-  <div class="photo-frame">
-    <img src="s4.jpg" alt="Foto 3" onclick="showPhoto(this)">
-    <p>Foto 4</p>
-  </div>
-
-    <p>Foto 3</p>
-
+    <div class="photo-grid">
+      <div class="photo-frame"><img src="s2.jpg" alt="Foto 1" onclick="showPhoto(this)"><p>Foto 1</p></div>
+      <div class="photo-frame"><img src="s3.jpg" alt="Foto 2" onclick="showPhoto(this)"><p>Foto 2</p></div>
+      <div class="photo-frame"><img src="s4.jpg" alt="Foto 3" onclick="showPhoto(this)"><p>Foto 3</p></div>
+    </div>
     <div class="panel-actions">
-      <a class="neon-button" href="https://drive.google.com/drive/folders/1aVfxWTXSY2666sg_FXpjaXK01mupMh6q?usp=drive_link">Buka Google Drive</a>
+      <a class="neon-button" href="https://drive.google.com/drive/folders/1aVfxWTXSY2666sg_FXpjaXK01mupMh6q?usp=drive_link" target="_blank" rel="noopener">Buka Google Drive</a>
       <button class="neon-button" type="button" onclick="closePanels()">Kembali</button>
     </div>
   </div>
 </section>
 
-```html
 <!-- Pembesar foto -->
 <div class="lightbox" id="photo-lightbox"
      onclick="hidePhoto(event)" aria-hidden="true">
@@ -456,54 +671,7 @@ h2 {
 
   <img id="lightbox-image" src="" alt="Foto diperbesar">
 </div>
-```
 
-<!-- Panel musik juga tampil di atas background planet yang sama -->
-```html
-<section class="panel" id="music-panel" aria-hidden="true">
-  <div class="panel-card music-player-card">
-
-    <button class="music-back" onclick="closePanels()"
-            type="button">←</button>
-
-    <p class="music-heading">NOW PLAYING</p>
-
-    <img id="album-cover"
-         src="https://placehold.co/500x500/071426/00f0ff?text=QUEEN+OF+ANGEL"
-         alt="Cover musik">
-
-    <h2 id="song-title">Pilih lagu</h2>
-    <p id="song-artist">Queen Of Angel</p>
-
-    <audio id="audio-player" preload="metadata"></audio>
-
-    <div class="progress-area">
-      <span id="current-time">0:00</span>
-      <input id="music-progress" type="range"
-             min="0" max="100" value="0" step="0.1">
-      <span id="duration-time">0:00</span>
-    </div>
-
-    <div class="player-buttons">
-      <button onclick="playPreviousTrack()" type="button">⏮</button>
-      <button id="play-pause-button"
-              onclick="toggleMusicPlayback()" type="button">▶</button>
-      <button onclick="playNextTrack()" type="button">⏭</button>
-    </div>
-
-    <div class="volume-row">
-      <span>🔊</span>
-      <input id="volume-slider" type="range"
-             min="0" max="1" step="0.01" value="0.8">
-      <span id="volume-value">80%</span>
-    </div>
-
-    <div id="music-list" class="music-list"></div>
-
-  </div>
-  
-</section>
-```
 <script>
 // Klik foto galeri untuk memperbesar, klik area gelap atau X untuk menutup.
 let photoZoom = 1;
@@ -551,101 +719,44 @@ function hidePhoto(event) {
     large.style.transform = 'scale(1)';
     photoZoom = 1;
 }
-// Daftar putar mencakup lagu website dan lagu lokal yang dipilih pengunjung.
-const musicQueue = [
-  { path: 'music/lagu1.mp3', title: 'Lagu 1', local: false },
-  { path: 'music/lagu2.mp3', title: 'Lagu 2', local: false }
-];
-let currentTrackIndex = -1;
-let localObjectUrls = [];
-
-function renderMusicList() {
-  const list = document.getElementById('music-list');
-  if (!list) return;
-  list.innerHTML = '';
-  musicQueue.forEach((track, index) => {
-    const li = document.createElement('li');
-    const name = document.createElement('span');
-    name.className = 'track-name';
-    name.textContent = (index + 1) + '. ' + track.title + (track.local ? ' (file perangkat)' : '');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = '▶ Putar';
-    button.addEventListener('click', () => playTrackAt(index));
-    li.append(name, button);
-    list.appendChild(li);
-  });
-}
-
-function playTrackAt(index) {
-  if (!musicQueue.length) return;
-  if (index < 0) index = musicQueue.length - 1;
-  if (index >= musicQueue.length) index = 0;
-  currentTrackIndex = index;
-  const track = musicQueue[currentTrackIndex];
-  const player = document.getElementById('audio-player');
-  player.src = track.path;
-  player.load();
-  document.getElementById('now-playing').textContent = 'Sedang diputar: ' + track.title;
-  document.getElementById('play-pause-button').textContent = '⏸ Jeda';
-  player.play().catch(() => {
-    document.getElementById('play-pause-button').textContent = '▶ Putar';
-    alert('Lagu belum dapat diputar. Pastikan file tersedia dan nama/lokasi file sesuai. Untuk lagu website, cek folder music di GitHub.');
-  });
-}
-
-function playWebsiteTrack(path, title) {
-  let index = musicQueue.findIndex(track => !track.local && track.path === path);
-  if (index === -1) {
-    musicQueue.push({ path, title, local: false });
-    renderMusicList();
-    index = musicQueue.length - 1;
-  }
-  playTrackAt(index);
-}
-function playNextTrack() { if (musicQueue.length) playTrackAt(currentTrackIndex + 1); }
-function playPreviousTrack() {
-  const player = document.getElementById('audio-player');
-  if (player.currentTime > 3) { player.currentTime = 0; return; }
-  if (musicQueue.length) playTrackAt(currentTrackIndex - 1);
-}
-function toggleMusicPlayback() {
-  const player = document.getElementById('audio-player');
-  if (!player.src) { playTrackAt(0); return; }
-  if (player.paused) player.play().then(() => {
-    document.getElementById('play-pause-button').textContent = '⏸ Jeda';
-  }).catch(() => {});
-  else { player.pause(); document.getElementById('play-pause-button').textContent = '▶ Putar'; }
-}
-
+// My Note: catatan disimpan di browser perangkat ini.
 document.addEventListener('DOMContentLoaded', () => {
-  const player = document.getElementById('audio-player');
-  const input = document.getElementById('local-music-file');
-  const volumeSlider = document.getElementById('volume-slider');
-  const volumeValue = document.getElementById('volume-value');
-  player.volume = 0.8;
-  volumeSlider.addEventListener('input', () => {
-    player.volume = Number(volumeSlider.value);
-    volumeValue.textContent = Math.round(player.volume * 100) + '%';
+  const lockForm = document.getElementById('lock-form');
+  lockForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const password = document.getElementById('site-password').value;
+    if (password === 'Cintaku') {
+      document.getElementById('lock-screen').style.display = 'none';
+    } else {
+      document.getElementById('lock-error').textContent = 'Password belum tepat. Coba lagi.';
+      document.getElementById('site-password').value = '';
+    }
   });
-  player.addEventListener('play', () => { document.getElementById('play-pause-button').textContent = '⏸ Jeda'; });
-  player.addEventListener('pause', () => { document.getElementById('play-pause-button').textContent = '▶ Putar'; });
-  // Otomatis pindah ke lagu berikutnya setelah lagu selesai.
-  player.addEventListener('ended', playNextTrack);
-  input.addEventListener('change', () => {
-    const files = Array.from(input.files || []);
-    if (!files.length) return;
-    files.forEach(file => {
-      const url = URL.createObjectURL(file);
-      localObjectUrls.push(url);
-      musicQueue.push({ path: url, title: file.name, local: true });
-    });
-    renderMusicList();
-    // Mulai putar lagu pertama dari file yang baru dipilih.
-    playTrackAt(musicQueue.length - files.length);
-    input.value = '';
+
+  const note = document.getElementById('note-text');
+  const savedNote = localStorage.getItem('rofi-my-note');
+  if (savedNote) note.value = savedNote;
+  document.getElementById('save-note').addEventListener('click', () => {
+    localStorage.setItem('rofi-my-note', note.value);
+    document.getElementById('note-status').textContent = 'Catatan berhasil disimpan di browser ini.';
   });
-  renderMusicList();
+
+  const audio = document.getElementById('background-audio');
+  const musicButton = document.getElementById('floating-music');
+  musicButton.addEventListener('click', async () => {
+    if (audio.paused) {
+      try { await audio.play(); }
+      catch (error) { document.getElementById('note-status').textContent = 'Musik belum bisa diputar. Coba tekan tombol sekali lagi.'; }
+    } else audio.pause();
+  });
+  audio.addEventListener('play', () => {
+    musicButton.classList.add('playing');
+    musicButton.setAttribute('aria-label', 'Jeda musik');
+  });
+  audio.addEventListener('pause', () => {
+    musicButton.classList.remove('playing');
+    musicButton.setAttribute('aria-label', 'Putar musik');
+  });
 });
 
 function openPanel(panelId) {
